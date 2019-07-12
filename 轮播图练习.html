@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="animate.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        
+        li {
+            list-style: none;
+        }
+        
+        .clearfix:after {
+            content: "";
+            height: 0;
+            display: block;
+            visibility: hidden;
+            clear: both;
+        }
+        
+        .clearfix {
+            *zoom: 1;
+        }
+        
+        a {
+            display: block;
+            width: 30px;
+            height: 50px;
+            background-color: pink;
+            text-decoration: none;
+            text-align: center;
+            line-height: 50px;
+        }
+        
+        a img {
+            vertical-align: middle;
+        }
+        
+        .focus {
+            position: relative;
+            width: 721px;
+            height: 455px;
+            margin: 10px auto;
+            overflow: hidden;
+        }
+        
+        .focus ul {
+            position: relative;
+            left: 0;
+            width: 600%;
+        }
+        
+        .focus ul li {
+            /* 因为此时盒子的宽度是一张图片你的宽度  所以浮动后图片也不能在一排显示  要给ul增加宽度*/
+            float: left;
+        }
+        
+        .arrow_l,
+        .arrow_r {
+            display: none;
+            position: absolute;
+            top: 50%;
+            /* left: 0; */
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, .4);
+            z-index: 2;
+        }
+        
+        .arrow_l {
+            left: 0;
+        }
+        
+        .arrow_r {
+            right: 0;
+        }
+        
+        .circle {
+            position: absolute;
+            bottom: 20px;
+            left: 80px;
+            cursor: pointer;
+        }
+        
+        .circle li {
+            float: left;
+            width: 10px;
+            height: 10px;
+            border: 2px solid rgba(255, 255, 255, .5);
+            margin: 0 3px;
+            border-radius: 50%;
+        }
+        
+        .current {
+            background-color: #fff;
+        }
+    </style>
+
+    <script>
+        window.addEventListener('load', function() {
+            var focus = document.querySelector('.focus');
+            var arrow_l = document.querySelector('.arrow_l');
+            var arrow_r = document.querySelector('.arrow_r');
+            var ul = focus.querySelector('ul');
+            console.log(ul);
+
+            var circle = focus.querySelector('.circle');
+            //  第一步 当鼠标经过focus的时候 左右箭头显示和隐藏
+            focus.addEventListener('mouseenter', function() {
+                arrow_l.style.display = 'block';
+                arrow_r.style.display = 'block';
+                // 当鼠标经过 停止图片的自动播放
+                clearInterval(timer);
+                // timer = null;
+            });
+            focus.addEventListener('mouseleave', function() {
+                arrow_l.style.display = 'none';
+                arrow_r.style.display = 'none';
+                //  这里不能用 var timer =   因为添加var后 会把timer变成局部变量
+                timer = setInterval(function() {
+                    arrow_r.click();
+                }, 2000)
+            });
+            //  第二步 因为页面你的小圆圈是根据图片的数量来定的  所以要动态生成小圆圈 此处用到for循环
+            //  图片的数量也就是ul 里面 的li 的数量
+            for (var i = 0; i < ul.children.length; i++) {
+                //  创建ol里面的li元素
+                var li = document.createElement('li');
+                li.setAttribute('date_index', i);
+                circle.appendChild(li);
+                // 因为小圆圈默认选定的是第一张图片  所以给第一个li 添加current 样式
+                circle.children[0].className = 'current';
+                // 因为小圆圈已经创建  所以给小圆圈添加点击事件  也就是当点击到第一个小圆圈的时候  图片也跟着显示第几张图片
+                //  同时要获取用户点击的是第几个小圆圈  所以要获取小圆圈的索引号
+                li.addEventListener('click', function() {
+                    // 点击小圆圈  给当前小圆圈加上current样式 同时去掉去他小圆圈的current样式 用到排他思想
+                    for (var i = 0; i < circle.children.length; i++) {
+                        circle.children[i].className = '';
+                    };
+                    this.className = 'current';
+
+                    //  在点击的同时图片跟着移动  移动的距离 就是索引号*图片的宽度  图片的宽度也就是 focus.offsetWidth
+                    // console.log(focus.offsetWidth);
+                    var index = this.getAttribute('date_index');
+                    num = index;
+                    yuanQuan = index;
+                    animate(ul, -index * focus.offsetWidth);
+                });
+            }
+            // 第三步 当点击左右按钮 图片也跟着移动
+            // 右侧按钮start
+            // 这里定义一个变量num 作为索引号的作用  每点击一下右侧按钮 图片移动 num*focus.offsetWidth 同时每点一次让num自加1
+            var num = 0;
+            //  又因为当点击到最后一张的时候 要跳转到第一张 这里采用无缝滚动  首先 把第一张图片克隆一份放在最后
+            // 设置一个变量 性质和num一样  但是是用来控制小圆圈的序号
+            var yuanQuan = 0;
+            var last = ul.children[0].cloneNode(true);
+            ul.appendChild(last);
+            // 为了防止用户点击过快 图片移动的过快 这里要用到节流阀原理
+            var flag = true;
+            arrow_r.addEventListener('click', function() {
+                if (flag) {
+                    flag = false;
+                    // 这里需要判断一下 当num的值为最后一张的时候 让ul直接跳转到第一张图片 然后动画移动到第二章图片上
+                    if (num == ul.children.length - 1) {
+                        ul.style.left = 0;
+                        num = 0;
+                    }
+                    num++;
+                    // 节流阀就是在图片动画运动完之后打开
+                    animate(ul, -num * focus.offsetWidth, function() {
+                        flag = true;
+                    });
+                    // 第四步 当点击右侧按钮的时候 下面的小圆圈也要根据显示的是哪张图片来跳到第几个小圆圈  要先设置一个变量来控制小圆圈
+                    yuanQuan++;
+                    // 同时用到排他思想 
+                    // 这里也需要判断 当点击到最后一张图片的时候 yuanQuan = 0
+                    if (yuanQuan == circle.children.length) {
+                        yuanQuan = 0;
+                    }
+                    for (var i = 0; i < circle.children.length; i++) {
+                        circle.children[i].className = '';
+                    }
+                    console.log(circle.children[yuanQuan]);
+
+                    circle.children[yuanQuan].className = 'current';
+                }
+            });
+            // 左侧按钮
+            arrow_l.addEventListener('click', function() {
+
+                if (flag) {
+                    flag = false;
+                    // 这里需要判断一下 当num的值小于0 的时候 让图片直接跳到第四张
+                    if (num == 0) {
+                        ul.style.left = -(ul.children.length - 1) * focus.offsetWidth + 'px';
+                        num = ul.children.length - 1;
+                    }
+                    num--;
+                    animate(ul, -num * focus.offsetWidth, function() {
+                        flag = true;
+                    });
+                    // 第四步 当点击右侧按钮的时候 下面的小圆圈也要根据显示的是哪张图片来跳到第几个小圆圈  要先设置一个变量来控制小圆圈
+                    yuanQuan--;
+                    // 同时用到排他思想 
+                    // 这里也需要判断 当点击到最后一张图片的时候 yuanQuan = 0
+                    if (yuanQuan < 0) {
+                        yuanQuan = circle.children.length - 1;
+                    }
+                    for (var i = 0; i < circle.children.length; i++) {
+                        circle.children[i].className = '';
+                    }
+                    console.log(circle.children[yuanQuan]);
+
+                    circle.children[yuanQuan].className = 'current';
+                }
+            });
+            // 当不点击任何按钮的时候  图片自动播放 这里用到定时器
+            var timer = setInterval(function() {
+                arrow_r.click();
+            }, 2500);
+        })
+    </script>
+</head>
+
+<body>
+    <div class="focus">
+        <a href="javascript:;" class="arrow_l">
+            <img src="images/arrow-prev.png" alt="">
+        </a>
+        <a href="javascript:;" class="arrow_r">
+            <img src="images/arrow-next.png" alt="">
+        </a>
+        <ul class="clearfix">
+            <li>
+                <img src="images/focus.jpg" alt="">
+            </li>
+            <li>
+                <img src="images/focus1.jpg" alt="">
+            </li>
+            <li>
+                <img src="images/focus2.jpg" alt="">
+            </li>
+            <li>
+                <img src="images/focus3.jpg" alt="">
+            </li>
+        </ul>
+        <ol class="circle">
+
+        </ol>
+    </div>
+</body>
+
+</html>
